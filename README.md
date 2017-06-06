@@ -1,5 +1,5 @@
 # Python-Neural-Network
 
 <p align="center">
-  <img src="../10000 Generation.png" width="350"/>
+  <img src="http://imgur.com/qvSmsVI.png" width="350"/>
 </p>
