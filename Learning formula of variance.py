@@ -25,11 +25,13 @@ import math
 
 #generate input
 input = []
+middle = []
 output = []
-for i in range(30,5000):
+for i in range(1,5000):
 
      data = random.sample(range(100), 30)
      data.sort()
+     middle.append(np.square(data))
      output.append([np.var(data)])
      mean = np.mean(data)
 
@@ -38,35 +40,44 @@ for i in range(30,5000):
 
 
 
-print(input[0])
-print(output[0])
+middle = np.array(middle)
 
-
-
-model = Sequential()
-model.add(Dense(30,input_dim= 30, activation = "relu"))
-for i in range(15):
-    model.add(Dense(64,input_dim= 30, activation = "relu"))
-
-model.add(Dense(1))
-model.compile(loss='mse', optimizer = 'adam')
+#model1.add(Dense(30,input_dim= 30, activation = "relu"))
+#for i in range(17):
+#    model1.add(Dense(32, activation = "relu"))
+#
+#model1.add(Dense(30))
+#model1.compile(loss='mse', optimizer = 'Rmsprop')
 
 startime= time.time()
-history_model = model.fit(input,output,epochs = 5000, batch_size = 256, verbose = 2, validation_split=0.2)
+
+#history_model = model1.fit(input,middle,epochs = 5000, batch_size = 512, verbose = 2, validation_split=0.2)
+#print(model1.predict(input))
+model2 = Sequential()
+model2.add(Dense(30,input_dim= 30, activation = "relu"))
+model2.add(Dense(246, activation = "relu"))
+model2.add(Dense(246, activation = "relu"))
+
+model2.add(Dense(1))
+model2.compile(loss='mse', optimizer = 'adam')
+
+history_model = model2.fit(input,output,epochs = 5000, batch_size = 512, verbose = 2, validation_split=0.2)
+
 endtime = time.time()
 print("time:")
 print(endtime-startime)
 
 plt.figure(figsize=(20,10))
-plt.plot(np.divide((output-model.predict(input)),output)*100)
+plt.plot(np.divide((output-model2.predict(input)),output)*100)
 
 test = np.array([random.sample(range(100), 30)])
 
 
 test = test - np.mean(test)
 test.sort()
+
 print(test)
 
-print(model.predict(test))
+print(model2.predict(test))
 print(np.var(test))
 plt.show()
