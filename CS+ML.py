@@ -47,7 +47,7 @@ def create_var(Return,i):
         for j in range(data-i+1,data):
             temp.append(Return[j])
 
-        var.append(np.var(temp))
+        var.append([np.var(temp)])
     return var
 
 ##########
@@ -55,18 +55,20 @@ n = len(Return)
 y = Return
 yt = spfft.dct(y, norm='ortho')
 
-plt.plot(y)
-plt.title('Original (Daily Return Value)')
-plt.show()
+# plt.plot(y)
+# plt.title('Original (Daily Return Value)')
+# plt.show()
 
+#
 
-plt.plot(yt)
-plt.title("DCT of oroginal data")
-plt.show()
+#
+# plt.plot(yt)
+# plt.title("DCT of oroginal data")
+
 varO = create_var(y,varnum)
-plt.plot(varO)
-plt.title("variance, original")
-plt.show()
+# plt.plot(varO)
+# plt.title("variance, original")
+
 ########
 from scipy.fftpack import dct, idct
 from scipy.sparse import coo_matrix
@@ -77,33 +79,46 @@ from sklearn.linear_model import Lasso
 lasso = Lasso(alpha=0.01,max_iter=10000)
 lasso.fit(A,Return[0::num])
 
-plt.plot(lasso.coef_)
-plt.show()
+# plt.plot(lasso.coef_)
+
 sparseness = np.sum(lasso.coef_ == 0)/len(Return)
 print( "Solution is %{0} sparse".format(100.*sparseness))
 #######
 Xhat = idct(lasso.coef_)
-plt.figure()
-plt.plot(Xhat)
-plt.title('Reconstructed signal')
-plt.show()
-plt.figure()
-
-plt.plot(Xhat-Return)
-plt.title('Error delta')
-plt.show()
-varN = create_var(Xhat,varnum)
-
-plt.plot(varN)
-plt.title("Variance, recovered")
-plt.show()
-varO=np.array(varO)
-varN=np.array(varN)
-plt.plot(varO-varN)
-plt.title("Error delta for varience")
-plt.show()
+# plt.figure()
+# plt.plot(Xhat)
+# plt.title('Reconstructed signal')
+# plt.show()
 
 
-plt.plot(np.divide(varO-varN,varO)*100)
-plt.title("error Precentage for variance")
+def lag(input,lag= 30):
+    out = []
+    for i in range(lag-1, len(input)):
+        temp = []
+        for j in range(i,i+lag):
+            temp.append(input[i])
+        out.append(temp)
+    return out
+
+TrainX = lag(Xhat)
+TrainX = np.array(TrainX)
+varO = np.array(varO)
+callbacks=EarlyStopping(monitor='val_loss', patience=200, verbose=0, mode='auto')
+model = Sequential()
+model.add(Dense(128,input_dim = TrainX.shape[1]))
+for i in range(5):
+    model.add(Dense(168,activation= "relu"))
+
+model.add(Dense(1))
+model.compile(loss = 'mse', optimizer='adam')
+model.fit(TrainX,varO,epochs=1000,batch_size = 64 , verbose = 2)
+
+
+
+predict = model.predict(TrainX)
+plt.plot(predict)
+plt.show()
+
+print(varO)
+plt.plot(predict-varO)
 plt.show()
