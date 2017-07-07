@@ -21,7 +21,7 @@ from keras.callbacks import EarlyStopping
 from sklearn.preprocessing import LabelEncoder
 ##
 #NUMBER OF SPACE
-num = 6
+num = 20
 varnum = 30
 
 
@@ -72,12 +72,12 @@ varO = create_var(y,varnum)
 ########
 from scipy.fftpack import dct, idct
 from scipy.sparse import coo_matrix
-D = dct(np.eye(len(Return)))
+D = dct(np.eye(len(Y)))
 A = D[0::num]
 np.shape(A)
 from sklearn.linear_model import Lasso
-lasso = Lasso(alpha=0.01,max_iter=10000)
-lasso.fit(A,Return[0::num])
+lasso = Lasso(alpha=1,max_iter=10000)
+lasso.fit(A,Y[0::num])
 
 # plt.plot(lasso.coef_)
 
@@ -85,10 +85,11 @@ sparseness = np.sum(lasso.coef_ == 0)/len(Return)
 print( "Solution is %{0} sparse".format(100.*sparseness))
 #######
 Xhat = idct(lasso.coef_)
-# plt.figure()
-# plt.plot(Xhat)
-# plt.title('Reconstructed signal')
-# plt.show()
+plt.figure()
+plt.plot(Xhat)
+plt.plot(Y)
+plt.title('Reconstructed signal')
+plt.show()
 
 
 def lag(input,lag= 30):
@@ -100,25 +101,29 @@ def lag(input,lag= 30):
         out.append(temp)
     return out
 
-TrainX = lag(Xhat)
-TrainX = np.array(TrainX)
-varO = np.array(varO)
-callbacks=EarlyStopping(monitor='val_loss', patience=200, verbose=0, mode='auto')
-model = Sequential()
-model.add(Dense(128,input_dim = TrainX.shape[1]))
-for i in range(5):
-    model.add(Dense(168,activation= "relu"))
+# TrainX = lag(Xhat)
+# TrainX = np.array(TrainX)
+# varO = np.array(varO)
+# callbacks=EarlyStopping(monitor='val_loss', patience=200, verbose=0, mode='auto')
+# model = Sequential()
+# model.add(Dense(128,input_dim = TrainX.shape[1]))
+# for i in range(5):
+    # model.add(Dense(168,activation= "relu"))
 
-model.add(Dense(1))
-model.compile(loss = 'mse', optimizer='adam')
-model.fit(TrainX,varO,epochs=1000,batch_size = 64 , verbose = 2)
+#
+# model.add(Dense(1))
+# model.compile(loss = 'mse', optimizer='adam')
+# model.fit(TrainX,varO,epochs=1000,batch_size = 64 , verbose = 2)
 
+#
 
+#
 
-predict = model.predict(TrainX)
-plt.plot(predict)
-plt.show()
+#
+# predict = model.predict(TrainX)
+# plt.plot(predict)
+# plt.show()
 
-print(varO)
-plt.plot(predict-varO)
-plt.show()
+#
+# print(varO)
+# plt.plot(predict-varO)
