@@ -45,9 +45,9 @@ print(output[0:2])
 
 
 model = Sequential()
-model.add(Dense(16,input_dim= 2,activation='relu'))
+model.add(Dense(2,input_dim= 2,activation='relu'))
 for i in range(20):
-    model.add(Dense(512,input_dim= 2, activation = "linear"))
+    model.add(Dense(2,input_dim= 2, activation = "linear"))
 model.add(Dense(1))
 
 

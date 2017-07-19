@@ -28,6 +28,8 @@ dataframe.dropna(how="any", inplace=True, axis = 0)
 
 #print (dataframe.head())
 Y = dataframe.loc[:,"Close"].values
+
+##create return value
 def create_return(Y):
     Return = []
     for data in range(1,len(Y)):
@@ -36,6 +38,7 @@ def create_return(Y):
     return Return
 Return = create_return(Y)
 
+##create rolling variance
 def create_var(data,i):
     var = []
 
@@ -51,16 +54,16 @@ Var = create_var(Return,30)
 Var = np.array(Var[:-1])
 
 print(len(Var))
+##locating the index constituents
 X = dataframe.loc[:,"700 HK Equity":"293 HK Equity"]
 TrainXR = []
 print(X.shape)
 for column in X:
-
     TrainXR.append(create_return(X[column].values))
+##converting each daily index constituents value to their's return valu
 
 
-
-
+#Taking the Transpose of TrainX
 Train_X = []
 TrainXR = np.array(TrainXR)
 print(TrainXR.shape)
@@ -70,7 +73,7 @@ for i in range(0,len(TrainXR[1])):
 
 Train_X = np.array(Train_X)
 ###########
-
+##creating a rolling window , in the shape of 2D
 print(Train_X.shape)
 def moving2d (array,look_back=30):
      T = []
@@ -88,37 +91,20 @@ TrainX = moving2d(Train_X,30)
 TrainX = np.array(TrainX)
 
 ###########
-#print(Train_X.shape
-# TrainX =[]
-# for Return in TrainXR:
-
-
-# from sklearn.decomposition import PCA, FastICA
-# n_comp = 10
-# ica = FastICA(n_components=n_comp, random_state=42)
-# ica_X = ica.fit_transform(X)
-# for i in range(1, n_comp+1):
-# Train_X = []
-# for i in range(0,len(TrainX[1])):
-    # TrainX = np.array(TrainX)
-    # Train_X.append(TrainX[:,i])
-
-#
-# Train_X = np.array(Train_X[:-1])
-# print(Train_X.shape)
+#print(Train_X.shap
 
 from sklearn.utils import resample
 
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import KFold
 kf = KFold(n_splits=5,shuffle = True, random_state = 42)
-
+##5 fold CV
 
 print(TrainX.shape)
 cvscores = []
 import time
 start = time.time()
-
+## for this problem we will use a CNN instead
 TrainX= np.reshape(TrainX,(TrainX.shape[0],TrainX.shape[1],TrainX.shape[2],1))
 for train, test in kf.split(TrainX):
     model = Sequential()
