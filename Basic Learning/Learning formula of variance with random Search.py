@@ -72,15 +72,19 @@ model2.compile(loss='mse', optimizer = 'adam')
 ########
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.ensemble import RandomForestRegressor
+
+
+
+#random forrest model
 clf = RandomForestRegressor(n_estimators=20)
 
-
+##parameter dictionary
 param_dist = {"max_depth": [30,20,10,5,3, None],
               "min_samples_split": sp_randint(2, 30),
               "min_samples_leaf": sp_randint(2, 30),
               "bootstrap": [True, False],
               }
-
+##perform random search with parameter dictionary on random forrest
 random_search = RandomizedSearchCV(clf,param_distributions=param_dist, n_iter=100,verbose = 2)
 
 def report(results, n_top=3):
@@ -109,6 +113,9 @@ from plotly.graph_objs import Scatter, Figure, Layout, Choropleth
 from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 import plotly.graph_objs as go
 
+
+
+#perform random forrest on the best model from random search
 clf2= RandomForestRegressor(bootstrap= False,max_depth= 3, min_samples_leaf= 17, min_samples_split= 20, n_estimators=100)
 clf2.fit(input,output)
 endtime = time.time()

@@ -26,7 +26,7 @@ from keras import metrics
 from keras.callbacks import EarlyStopping
 #NUMBER OF SPACE
 num = 6
-varnum = 30
+STDnum = 30
 
 
 ##
@@ -56,8 +56,8 @@ def create_return_month(Y):
     return Return
 
 
-##def function to create rolling window with variance calculated
-def rolling_window_withVar(Y,int,k= 1):
+##def function to create rolling window with STDiance calculated
+def rolling_window_withSTD(Y,int,k= 1):
     output = []
     for i in range(int,len(Y)):
         temp = []
@@ -75,22 +75,18 @@ def rolling_window_pre(Y,int,k = 1):
                 temp.append(Y[j])
             output.append((np.array(temp)))
         return output
-
-
-
-
+#creating return value
 Return_value_Daily = create_return(ANS.values)
 Return_value_Monthly = create_return_month(ANS.values)
+
 print(Return_value_Monthly[0:12])
 print(Return_value_Daily[0:252])
 print(max(Return_value_Daily[0:252]))
 print(min(Return_value_Daily[0:252]))
-Rolling_Day = rolling_window_withVar(Return_value_Daily,252,252)
-Rolling_month  = rolling_window_withVar(Return_value_Monthly,12,12)
 
-##
-
-
+#creating rolling window STd
+Rolling_Day = rolling_window_withSTD(Return_value_Daily,252,252)
+Rolling_month  = rolling_window_withSTD(Return_value_Monthly,12,12)
 
 ########CS
 from scipy.fftpack import dct, idct, fft, ifft ,dst,idst
@@ -102,7 +98,7 @@ A = D[20::20]
 np.shape(A)
 from sklearn.linear_model import Lasso
 #LASSO
-lasso = Lasso(alpha=1.5,max_iter=10000, fit_intercept = True, precompute  = True)
+lasso = Lasso(alpha=1.5,max_iter=200000, fit_intercept = True, precompute  = True)
 lasso.fit(A,Return_value_Monthly)
 
 # plt.plot(lasso.coef_)
@@ -111,13 +107,8 @@ sparseness = np.sum(lasso.coef_ == 0)/len(Rolling_Day)
 print( "Solution is %{0} sparse".format(100.*sparseness))
 #######Reverse ICT
 Xhat = idct(lasso.coef_)
-
-
 ##Xhat is the result form CS
-###
-
-
-Reconstructed_Rolling_Variance = rolling_window_withVar(Xhat,252,252)
+Reconstructed_Rolling_STDiance = rolling_window_withSTD(Xhat,252,252)
 ##machine learnign algrotihm here##
 
 
@@ -129,89 +120,93 @@ params = {'n_estimators': 500, 'max_depth': 30, 'min_samples_split': 2,
           'learning_rate': 0.01, 'loss': 'ls', 'verbose': 2 ,'random_state' : 10}
 clf = GradientBoostingRegressor(**params)
 Y = Rolling_Day[0::20]##using every 20 data from the daily input.
-online = []
 Rolling_month_pre = rolling_window_pre(Return_value_Monthly,12,12)
 
 
-#online learning from the last 45 to the last one avalible data.
-for x in range(-45,-1):
-
-    TrainX = Rolling_month_pre[:x]
-    TestX = Rolling_month_pre[x]
-    clf.fit(TrainX, Y[:x])
-    online.append(clf.predict(TestX)[0])
-
-###
-print(Reconstructed_Rolling_Variance)
+print(Reconstructed_Rolling_STDiance)
 from plotly.graph_objs import Scatter, Figure, Layout, Choropleth
 from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 import plotly.graph_objs as go
 #### using CS as input#####
-CS_online = []
+Testing_Result = []
 
-## LSTM here
+Reconstructed_Rolling_STDiance = np.array(Reconstructed_Rolling_STDiance)
+
 Rolling_Daily_pre = rolling_window_pre(Xhat,252,252)
+x = -30
 
-look_back = 252
-batch_size  = 1
-# fit an LSTM network to training data
-def fit_lstm(TrainX,TrainY, batch_size, nb_epoch, neurons):
-    X, y = TrainX, TrainY
-    model = Sequential()
-    model.add(LSTM(252, batch_input_shape=(1, look_back, 1), return_sequences =True ,stateful = True))
-    #model.add(BatchNormalization())
-    model.add(Dropout (0.2))
-    model.add(LSTM(252, batch_input_shape=(1, look_back, 1), return_sequences =False,stateful = True))
-    model.add(Dense(256, activation = 'relu'))
-    model.add(Dropout (0.2))
-    model.add(Dense(256, activation = 'relu'))
-    model.add(Dense(output_dim=1))
-    model.compile(loss="MSE", optimizer='adam')
-    for i in range(nb_epoch):
-        print('Generation %d' % (i))
-        model.fit(X, y, nb_epoch=1, batch_size=batch_size, verbose=2, shuffle=False)
-        model.reset_states()
-    return model
 
-##we wish to use the last 800 data for online prediction
-x = -800
-TrainX=  Rolling_Daily_pre[:x]
+#define X and Y valueable for training
+TrainX=  Xhat[:x]
 TrainX = np.array(TrainX)
-
-TrainY = Rolling_Day[:x]
+TrainX = np.reshape(TrainX,(TrainX.shape[0],1))
+TrainY = Return_value_Daily[:x]
 TrainY = np.array(TrainY)
-TrainY = np.reshape(TrainY,(TrainY.shape[0],1))
 
-TrainX= np.reshape(TrainX, (TrainX.shape[0],TrainX.shape[1],1))
-## train with all data before 800, 010 epochs .
-lstm_model = fit_lstm (TrainX , TrainY,  1 ,100, 29)
+from scipy.stats import randint as sp_randint
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.model_selection import RandomizedSearchCV
+clf = GradientBoostingRegressor(n_estimators = 10000, verbose = 2)
+
+
+#random search to find the hyperparameter
+#param to search
+param_dist = {"max_depth": [30,20,10,5,3, None],
+              "learning_rate": [1,0.1,0.01,0.001],
+              "min_samples_split": sp_randint(2, 30),
+              "min_samples_leaf": sp_randint(2, 30),
+
+              }
+
+###function to report the result
+def report(results, n_top=3):
+    for i in range(1, n_top + 1):
+        candidates = np.flatnonzero(results['rank_test_score'] == i)
+        for candidate in candidates:
+            print("Model with rank: {0}".format(i))
+            print("Mean validation score: {0:.3f} (std: {1:.3f})".format(
+                  results['mean_test_score'][candidate],
+                  results['std_test_score'][candidate]))
+            print("Parameters: {0}".format(results['params'][candidate]))
+            print("")
+import time
+start = time.time()
+
+#perform random search algrotihm
+
+
+# random_search = RandomizedSearchCV(clf,param_distributions=param_dist, n_iter=50,verbose = 2)
+# random_search.fit(TrainX, TrainY)
+# print("RandomizedSearchCV took %.2f seconds for %d candidates"
+       # " parameter settings." % ((time.time() - start), 20))
+# report(random_search.cv_results_,5  )
+
+#
+##Actual GBR here
+clf = GradientBoostingRegressor(n_estimators = 100000, min_samples_leaf = 12, min_samples_split = 4, max_depth= None, learning_rate = 0.01, verbose = 2)
+#fitting the datas
+clf.fit(TrainX,TrainY)
 ##training result
-ML_online = lstm_model.predict(TrainX, batch_size = 1 )
+Training_result = clf.predict(TrainX)
 
+#
+#
+TestX = np.reshape(Xhat[x:],(Xhat[x:].shape[0],1))
+Testing_Result = clf.predict(TestX)
 
-    #X = np.reshape(X, (X.shape[0],X.shape[1],1))
-CS_online = []
+#
+#
+Appended_result_MLCS = np.append(Training_result,Testing_Result)
 
-#ONLINE training and fitting
-for i in range(x,0):
-    X = np.array(Rolling_Daily_pre[i])
-    print (X)
-    X = np.reshape(X,(1,252,1))
-    Y = np.array(Rolling_Day[i])
-    Y = np.reshape(Y,(1,1))
-    Pred = Rolling_Daily_pre[i+1]
-    Pred = np.array(Pred)
-    Pred = np.reshape(Pred,(1,252,1))
-    for j in range(10):
-        print('Generation %d' % (i))
+#
+#
+Rolling_annual_for_predicted_Return_values = rolling_window_withSTD(Appended_result_MLCS,252,252)
 
-        lstm_model.fit(X, Y, nb_epoch=1, batch_size=batch_size, verbose=2, shuffle=False)
-        lstm_model.reset_states()
-    Pred = lstm_model.predict(Pred).flatten()
-    CS_online.append(Pred)
-
+#
+#
 ######plotting
 
+#
 RRM_Plot = go.Scatter(
           x=Date[0::20],
           y=Return_value_Monthly,
@@ -230,17 +225,15 @@ Re_Plot = go.Scatter(
             name = "Reconstructed Daily Return"
 )
 
-
-print(CS_online)
+#
+#
+print(Testing_Result)
 predict_plot_tset = go.Scatter(
-            x=Date[240+(len(TrainX)-43)*20::20],
-            y=online,
+            x=Date[:len(Training_result)],
+            y=Training_result,
             mode = 'lines+markers',
-            name = "GBM on monthly, -Testing, daily updated"
+            name = "CS+ML, return value- training"
 )
-
-
-
 Rolling_Day_Plot = go.Scatter(
           x=Date[252:],
           y=Rolling_Day,
@@ -252,19 +245,31 @@ Rolling_Month_Plot = go.Scatter(
           name = "Rolling Monthly Annual Return")
 Rolling_ReDay_Plot = go.Scatter(
           x=Date[252:],
-          y=Reconstructed_Rolling_Variance,
+          y=Reconstructed_Rolling_STDiance,
           name = "Reconstructed Rolling Daily Annual Return from Monthly")
 predict_plot_day = go.Scatter(
-          x=Date[-800:],
-          y=np.array(CS_online).flatten(),
-          name = "CS+ML, online testing prediction"
+          x=Date[x-1:],
+          y=Testing_Result,
+          name = "CS+ML- return value, testing"
+)
+#
+Rolling_annual_for_predicted_Return_values_plot = go.Scatter(
+        x=Date[252:],
+        y=Rolling_annual_for_predicted_Return_values,
+        name = "CS+ML,Rolling Annual return"
 )
 
+#
+#
 
+#
+#
+#
 layout = dict(
     title = "Rolling Annual Return ",
 
-
+#
+#
     legend=dict(  x=0,
         y=40,
         traceorder='normal',
@@ -279,5 +284,7 @@ layout = dict(
         )
 )
 
-fig = dict(data=[RR_Plot,Rolling_Day_Plot,Re_Plot,Rolling_ReDay_Plot,predict_plot_day,RRM_Plot,Rolling_Month_Plot ],layout = layout)
+#
+#
+fig = dict(data=[RR_Plot,Rolling_Day_Plot,Re_Plot,Rolling_ReDay_Plot,predict_plot_day,RRM_Plot,Rolling_Month_Plot ,predict_plot_tset,Rolling_annual_for_predicted_Return_values_plot],layout = layout)
 plot(fig)
