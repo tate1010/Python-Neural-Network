@@ -27,18 +27,11 @@ from keras.callbacks import EarlyStopping
 #NUMBER OF SPACE
 num = 6
 STDnum = 30
-
-
 ##
-
 dataframe = pandas.read_csv('C:\\Users\\tcheng\\Documents\\^HSI.csv')
 dataframe.dropna(how="any", inplace=True, axis = 0)
 Date = dataframe.loc[:,"Date"]
 ANS = dataframe.loc[:,"Close"]
-
-
-
-
 ##def fundction to create return
 def create_return(Y):
     Return = []
